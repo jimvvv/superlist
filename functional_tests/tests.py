@@ -38,12 +38,13 @@ class NewVisitorTest(LiveServerTestCase):
 		# is tying fly-fishing Lures)
 		inputbox.send_keys('Buy peacock feathers')
 
-		# When he hits enter, the page updates, and now the page lists
-		# "1: Buy peacock features to make a fly" (Jimmy is very methodical)
+		# When he hits enter, he is taken to a new URL,
+		# and now the page lists "1. Buy peacock feathers" as an item in a
+		# to-do list table
 		inputbox.send_keys(Keys.ENTER)
-
-
-		self.check_for_row_in_list_table('1: Buy peacock feathers')
+		jimmy_list_url = self.browser.current_url
+		self.assertRegexpMatches(jimmy_list_url, '/lists/.+')
+		self.check_for_row_in_list_table('1. Buy peacock feathers')
 
 		# There is still a text box inviting her to add another item. She
 		# enters "Use peacock feathers to make a fly" (Jimmy is very
@@ -55,6 +56,39 @@ class NewVisitorTest(LiveServerTestCase):
 		# The page updates again, and now shows both items on her list
 		self.check_for_row_in_list_table('1: Buy peacock feathers')
 		self.check_for_row_in_list_table('2: Use peacock feathers to make a fly')
+
+		# Now a new user, Francis, comes along to the site.
+
+		## We use a new browser session to make sure that no information
+		## of Jimmy's is coming through from cookies etc #
+		self.browser.quit()
+		self.browser = webdriver.Chrome()
+
+		# Francis visits the home page. There is no sign of Jimmy's 
+		# list
+		self.browser.get(self.live_server_url)
+		page_text = self.browser.find_element_by_tag_name('body').text
+		self.assertNotIn('Buy peacock feathers', page_text)
+		self.assertNotIn('make a fly', page_text)
+
+		# Francis starts a new list by entering a new item. He
+		# is less interesting than Jimmy...
+		inputbox = self.browser.find_element_by_id('id_new_item')
+		inputbox.send_keys('Buy milk')
+		inputbox.send_keys(Keys.ENTER)
+
+		# Francis gets his own unique URL
+		francis_list_url = self.browser.current_url
+		self.assertRegexpMatches(francis_list_url, '/lists/.+')
+		self.assertNotEqual(francis_list_url, jimmy_list_url)
+
+		# Again, there is no trace of Jimmy's list
+		page_text = self.browser.find_element_by_tag_name('body').text
+		self.assertNotIn('Buy peacock feathers', page_text)
+		self.assertIn('Buy milk', page_text)
+
+		# Satisfied, they both go back to sleep
+
 
 		# Jimmy wonders whether the site will remember her list. Then she sees
 		# that the site has generated a unique URL for him -- there is some
